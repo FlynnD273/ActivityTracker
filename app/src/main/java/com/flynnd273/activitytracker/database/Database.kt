@@ -1,5 +1,6 @@
 package com.flynnd273.activitytracker.database
 
+import androidx.compose.ui.graphics.Color
 import androidx.room.*
 import kotlinx.coroutines.flow.Flow
 import java.time.LocalDateTime
@@ -9,14 +10,18 @@ data class ActivityTask(
     @PrimaryKey(autoGenerate = true) val uid: Int = 0,
     @ColumnInfo(name = "name") val name: String,
     @ColumnInfo(name = "goal") val goal: Long,
-    @ColumnInfo(name = "progress") val progress: Long,
-    @ColumnInfo(name = "last_start") val lastStart: LocalDateTime?,
+    @ColumnInfo(name = "progress") val progress: Long = 0,
+    @ColumnInfo(name = "last_start") val lastStart: LocalDateTime? = null,
+    @ColumnInfo(name = "color") val color: Color? = null,
 )
 
 @Dao
 interface ActivityDao {
     @Query("SELECT * FROM activitytask ORDER BY name")
     fun getAll(): Flow<List<ActivityTask>>
+
+    @Query("SELECT * FROM activitytask WHERE uid = :id")
+    fun get(id: Int): ActivityTask
 
     @Update
     suspend fun update(activity: ActivityTask)

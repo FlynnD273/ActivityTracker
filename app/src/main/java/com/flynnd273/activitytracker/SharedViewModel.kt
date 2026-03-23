@@ -38,7 +38,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                             name = "My first activity",
                             goal = 30,
                             progress = 10,
-                            lastStart = null
+                            color = null,
                         )
                     )
                 }
