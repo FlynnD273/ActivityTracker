@@ -2,6 +2,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    id("com.google.devtools.ksp")
 }
 
 android {
@@ -37,13 +38,10 @@ android {
 }
 
 dependencies {
-    implementation(libs.exposed.core)
-    implementation(libs.exposed.jdbc)
-    implementation(libs.exposed.kotlin.datetime)
-    implementation(libs.exposed.dao)
-//    implementation("org.xerial:sqlite-jdbc:3.50.2.0")
-    implementation("com.github.gwenn:sqlite-dialect-android:1.0.0")
-//    implementation(libs.h2)
+    val room_version = "2.8.4"
+    implementation("androidx.room:room-runtime:$room_version")
+    ksp("androidx.room:room-compiler:$room_version")
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.activity.compose)

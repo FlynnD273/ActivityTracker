@@ -2,39 +2,47 @@ package com.flynnd273.activitytracker
 
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
-import com.flynnd273.activitytracker.database.ActivitiesTable
+import androidx.lifecycle.viewModelScope
+import androidx.room.Room
 import com.flynnd273.activitytracker.database.ActivityTask
-import com.flynnd273.activitytracker.database.initDb
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import org.jetbrains.exposed.v1.jdbc.Database
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import com.flynnd273.activitytracker.database.AppDatabase
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
 class SharedViewModel(application: Application) : AndroidViewModel(application) {
     private val appContext = getApplication<Application>()
 
-    private val _activities = MutableStateFlow(emptyList<ActivityTask>())
-    val activities = _activities.asStateFlow()
+    val db = Room.databaseBuilder(
+        appContext,
+        AppDatabase::class.java, "app-database"
+    ).build()
+    val activityDao = db.activityDao()
+
+    private val _activities = activityDao.getAll()
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = emptyList()
+        )
+    val activities: StateFlow<List<ActivityTask>> = _activities
 
     init {
-        val dbFile = appContext.getDatabasePath("activities.db")
-        Database.connect("jdbc:sqlite:file:${dbFile.absolutePath}", "org.sqlite.Driver")
-        initDb()
-        refreshActivities()
-        if (activities.value.isEmpty()) {
-            transaction {
-                ActivityTask.new {
-                    name = "My first activity"
-                    goalTime = 30
-                    accumulatedTime = 10
+        viewModelScope.launch {
+            activityDao.getAll().collectLatest {
+                if (it.isEmpty()) {
+                    activityDao.insert(
+                        ActivityTask(
+                            name = "My first activity",
+                            goal = 30,
+                            progress = 10,
+                            lastStart = null
+                        )
+                    )
                 }
             }
-        }
-    }
-
-    fun refreshActivities() {
-        transaction {
-            _activities.value = ActivityTask.all().sortedBy { ActivitiesTable.name }.toList()
         }
     }
 }

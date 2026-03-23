@@ -1,33 +1,35 @@
 package com.flynnd273.activitytracker.database
 
-import org.jetbrains.exposed.v1.core.dao.id.EntityID
-import org.jetbrains.exposed.v1.core.dao.id.IntIdTable
-import org.jetbrains.exposed.v1.dao.IntEntity
-import org.jetbrains.exposed.v1.dao.IntEntityClass
-import org.jetbrains.exposed.v1.datetime.datetime
-import org.jetbrains.exposed.v1.jdbc.SchemaUtils
-import org.jetbrains.exposed.v1.jdbc.transactions.transaction
+import androidx.room.*
+import kotlinx.coroutines.flow.Flow
+import java.time.LocalDateTime
 
+@Entity
+data class ActivityTask(
+    @PrimaryKey(autoGenerate = true) val uid: Int = 0,
+    @ColumnInfo(name = "name") val name: String,
+    @ColumnInfo(name = "goal") val goal: Long,
+    @ColumnInfo(name = "progress") val progress: Long,
+    @ColumnInfo(name = "last_start") val lastStart: LocalDateTime?,
+)
 
-object ActivitiesTable : IntIdTable("activities") {
-    val name = varchar("name", 256).uniqueIndex()
-    val goalTime = long("goal_time")
-    val accumulatedTime = long("accumulated_time")
-    val startTime = datetime("start_time").nullable()
+@Dao
+interface ActivityDao {
+    @Query("SELECT * FROM activitytask ORDER BY name")
+    fun getAll(): Flow<List<ActivityTask>>
+
+    @Update
+    suspend fun update(activity: ActivityTask)
+
+    @Insert
+    suspend fun insert(activity: ActivityTask)
+
+    @Delete
+    suspend fun delete(activity: ActivityTask)
 }
 
-class ActivityTask(id: EntityID<Int>) : IntEntity(id) {
-    companion object : IntEntityClass<ActivityTask>(ActivitiesTable)
-
-    var name by ActivitiesTable.name
-    var accumulatedTime by ActivitiesTable.accumulatedTime
-    var goalTime by ActivitiesTable.goalTime
-    var startTime by ActivitiesTable.startTime
-}
-
-
-fun initDb() {
-    transaction {
-        SchemaUtils.create(ActivitiesTable)
-    }
+@Database(entities = [ActivityTask::class], version = 1)
+@TypeConverters(Converters::class)
+abstract class AppDatabase : RoomDatabase() {
+    abstract fun activityDao(): ActivityDao
 }
