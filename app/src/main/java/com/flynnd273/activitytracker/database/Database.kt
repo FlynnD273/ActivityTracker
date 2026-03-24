@@ -21,7 +21,7 @@ interface ActivityDao {
     fun getAll(): Flow<List<ActivityTask>>
 
     @Query("SELECT * FROM activitytask WHERE uid = :id")
-    fun get(id: Int): ActivityTask
+    suspend fun get(id: Int): ActivityTask
 
     @Update
     suspend fun update(activity: ActivityTask)

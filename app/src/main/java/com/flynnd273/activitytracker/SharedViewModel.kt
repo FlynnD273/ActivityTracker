@@ -6,12 +6,14 @@ import androidx.lifecycle.viewModelScope
 import androidx.room.Room
 import com.flynnd273.activitytracker.database.ActivityTask
 import com.flynnd273.activitytracker.database.AppDatabase
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
+@OptIn(FlowPreview::class)
 class SharedViewModel(application: Application) : AndroidViewModel(application) {
     private val appContext = getApplication<Application>()
 
@@ -19,7 +21,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
         appContext,
         AppDatabase::class.java, "app-database"
     ).build()
-    val activityDao = db.activityDao()
+    private val activityDao = db.activityDao()
 
     private val _activities = activityDao.getAll()
         .stateIn(
@@ -44,5 +46,16 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                 }
             }
         }
+    }
+
+    fun updateActivity(activity: ActivityTask): ActivityTask {
+        viewModelScope.launch {
+            activityDao.update(activity)
+        }
+        return activity
+    }
+
+    suspend fun loadActivity(uid: Int): ActivityTask {
+        return activityDao.get(uid)
     }
 }
