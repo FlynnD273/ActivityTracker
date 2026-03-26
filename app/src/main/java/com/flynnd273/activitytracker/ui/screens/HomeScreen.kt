@@ -10,24 +10,29 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ProgressIndicatorDefaults
 import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.derivedStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import com.flynnd273.activitytracker.database.ActivityTask
+import kotlinx.coroutines.delay
 import java.time.Duration
 import java.time.LocalDateTime
-import kotlin.math.min
 
 @Composable
-fun AllActivitiesScreen(
+fun HomeScreen(
     activities: List<ActivityTask>,
     navigateToActivity: (Int) -> Unit
 ) {
+    var now by remember { mutableStateOf(LocalDateTime.now()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            now = LocalDateTime.now()
+            delay(500)
+        }
+    }
     Column {
         Text(
             "My Activities",
@@ -40,12 +45,12 @@ fun AllActivitiesScreen(
         )
         LazyColumn {
             items(activities) {
-                val progressValue = remember(it) {
+                val progressValue by remember(it) {
                     derivedStateOf {
-                        val baseProgress = it.progress.toFloat() / it.goal.coerceAtLeast(1)
+                        val baseProgress = it.progress
                         if (it.lastStart != null) {
-                            val elapsed = Duration.between(it.lastStart, LocalDateTime.now()).toMillis()
-                            min(1f, baseProgress + elapsed / 100_000f)
+                            val elapsed = Duration.between(it.lastStart, now)
+                            baseProgress + elapsed.seconds.toInt()
                         } else {
                             baseProgress
                         }
@@ -59,7 +64,7 @@ fun AllActivitiesScreen(
                 ) {
                     Text(it.name, fontSize = 4.em)
                     LinearProgressIndicator(
-                        progress = { progressValue.value },
+                        progress = { progressValue.toFloat() / it.goal.coerceAtLeast(1) },
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(vertical = 8.dp),

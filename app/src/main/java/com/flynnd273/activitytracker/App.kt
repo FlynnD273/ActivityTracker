@@ -13,7 +13,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.flynnd273.activitytracker.ui.screens.ActivityScreen
-import com.flynnd273.activitytracker.ui.screens.AllActivitiesScreen
+import com.flynnd273.activitytracker.ui.screens.HomeScreen
 import com.flynnd273.activitytracker.ui.theme.ActivityTrackerTheme
 
 @Composable
@@ -23,12 +23,12 @@ fun App(viewModel: SharedViewModel) {
     ActivityTrackerTheme {
         Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
             Box(modifier = Modifier.padding(innerPadding)) {}
-            NavHost(navController, startDestination = AllActivities) {
-                composable<AllActivities> {
-                    AllActivitiesScreen(activities, { navController.navigate(ActivityDetails(it)) })
+            NavHost(navController, startDestination = HomeScreenRoute) {
+                composable<HomeScreenRoute> {
+                    HomeScreen(activities, { navController.navigate(ActivityScreenRoute(it)) })
                 }
-                composable<ActivityDetails> {
-                    val activity: ActivityDetails = it.toRoute()
+                composable<ActivityScreenRoute> {
+                    val activity: ActivityScreenRoute = it.toRoute()
                     ActivityScreen(viewModel, activity.uid)
                 }
             }

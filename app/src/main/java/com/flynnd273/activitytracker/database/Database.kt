@@ -9,8 +9,8 @@ import java.time.LocalDateTime
 data class ActivityTask(
     @PrimaryKey(autoGenerate = true) val uid: Int = 0,
     @ColumnInfo(name = "name") val name: String,
-    @ColumnInfo(name = "goal") val goal: Long,
-    @ColumnInfo(name = "progress") val progress: Long = 0,
+    @ColumnInfo(name = "goal") val goal: Int,
+    @ColumnInfo(name = "progress") val progress: Int = 0,
     @ColumnInfo(name = "last_start") val lastStart: LocalDateTime? = null,
     @ColumnInfo(name = "color") val color: Color? = null,
 )

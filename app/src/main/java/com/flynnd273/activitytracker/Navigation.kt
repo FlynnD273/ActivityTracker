@@ -3,7 +3,7 @@ package com.flynnd273.activitytracker
 import kotlinx.serialization.Serializable
 
 @Serializable
-object AllActivities
+object HomeScreenRoute
 
 @Serializable
-data class ActivityDetails(val uid: Int)
+data class ActivityScreenRoute(val uid: Int)

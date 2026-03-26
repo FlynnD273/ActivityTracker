@@ -38,7 +38,7 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
                     activityDao.insert(
                         ActivityTask(
                             name = "My first activity",
-                            goal = 30,
+                            goal = 60,
                             progress = 10,
                             color = null,
                         )
@@ -49,10 +49,14 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun updateActivity(activity: ActivityTask): ActivityTask {
-        viewModelScope.launch {
-            activityDao.update(activity)
+        var newActivity = activity
+        if (newActivity.name.isBlank()) {
+            newActivity = activity.copy(name = newActivity.uid.toString())
         }
-        return activity
+        viewModelScope.launch {
+            activityDao.update(newActivity)
+        }
+        return newActivity
     }
 
     suspend fun loadActivity(uid: Int): ActivityTask {
