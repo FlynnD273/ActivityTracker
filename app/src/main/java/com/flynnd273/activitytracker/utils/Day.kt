@@ -1,4 +1,4 @@
-package com.flynnd273.activitytracker
+package com.flynnd273.activitytracker.utils
 
 enum class Day(val abbr: String) {
     Monday("Mo"),

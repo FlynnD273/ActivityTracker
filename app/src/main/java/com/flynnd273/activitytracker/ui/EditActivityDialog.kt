@@ -1,8 +1,9 @@
-package com.flynnd273.activitytracker.ui.screens
+package com.flynnd273.activitytracker.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
@@ -17,28 +18,26 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.window.Dialog
 import com.flynnd273.activitytracker.database.ActivityTask
-import com.flynnd273.activitytracker.ui.ColorPickerDialog
-import com.flynnd273.activitytracker.ui.DurationDialog
 import com.flynnd273.activitytracker.utils.toMinutesAndHours
 import kotlinx.coroutines.FlowPreview
 
 
 @OptIn(FlowPreview::class)
 @Composable
-fun EditActivityDialog(value: ActivityTask, onDialogClose: (ActivityTask) -> Unit) {
+fun EditActivityDialog(label: String, value: ActivityTask, onDialogClose: (ActivityTask?) -> Unit) {
     var activity by remember { mutableStateOf(value) }
     var editingGoal by remember { mutableStateOf(false) }
     var editingColor by remember { mutableStateOf(false) }
-    Dialog(onDismissRequest = { onDialogClose(activity) }) {
-        Card(modifier = Modifier.fillMaxWidth()) {
+    Dialog(onDismissRequest = { onDialogClose(null) }) {
+        Card(modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp)) {
             Text(
-                "Edit Activity",
+                label,
                 fontSize = 8.em,
                 fontWeight = FontWeight.Black,
                 textAlign = TextAlign.Center,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(4.dp),
+                    .padding(16.dp),
             )
             HorizontalDivider(modifier = Modifier.padding(4.dp))
             ColumnPair(
@@ -66,14 +65,8 @@ fun EditActivityDialog(value: ActivityTask, onDialogClose: (ActivityTask) -> Uni
                     )
                 },
                 {
-                    Button(onClick = {
-                        activity = activity.copy(progress = 0, lastStart = null)
-                    }) { Text("Reset Progress") }
-                },
-                {},
-                {
                     IconButton(onClick = {
-                        onDialogClose(value)
+                        onDialogClose(null)
                     }) {
                         Icon(Icons.Default.Close, "Cancel")
                     }
@@ -102,24 +95,38 @@ fun EditActivityDialog(value: ActivityTask, onDialogClose: (ActivityTask) -> Uni
 }
 
 @Composable
-fun ColumnPair(vararg items: @Composable () -> Unit) {
+private fun ColumnPair(vararg items: (@Composable () -> Unit)?) {
     Column(
         verticalArrangement = Arrangement.spacedBy(8.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = Modifier
-            .padding(4.dp)
+            .padding(16.dp)
     ) {
         items.toList().chunked(2).forEachIndexed { index, pair ->
             if (index + 1 == items.size / 2) {
                 Spacer(modifier = Modifier.height(64.dp))
             }
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                pair.forEach { item ->
-                    Box(
-                        contentAlignment = Alignment.Center,
-                        modifier = Modifier.weight(1f),
-                    ) {
-                        item()
+            if (pair[1] == null && pair[0] != null) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    pair[0]!!()
+                }
+            } else {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    pair.forEach { item ->
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            if (item != null) {
+                                item()
+                            }
+                        }
                     }
                 }
             }

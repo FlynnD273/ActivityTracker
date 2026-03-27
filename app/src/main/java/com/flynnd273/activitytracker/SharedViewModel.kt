@@ -1,27 +1,27 @@
 package com.flynnd273.activitytracker
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import android.content.Context
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.preferencesDataStore
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import androidx.room.Room
 import com.flynnd273.activitytracker.database.ActivityTask
 import com.flynnd273.activitytracker.database.AppDatabase
+import com.flynnd273.activitytracker.notifications.ActivityProgressService
+import com.flynnd273.activitytracker.workers.queueReminder
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
+import java.time.LocalTime
+
+private val Context.preferenceDatastore by preferencesDataStore("preferences")
+private val REMINDER_TIME_KEY = intPreferencesKey("reminderTime")
+
 
 @OptIn(FlowPreview::class)
-class SharedViewModel(application: Application) : AndroidViewModel(application) {
-    private val appContext = getApplication<Application>()
-
-    val db = Room.databaseBuilder(
-        appContext,
-        AppDatabase::class.java, "app-database"
-    ).build()
-    private val activityDao = db.activityDao()
+class SharedViewModel(val appContext: Context) : ViewModel() {
+    private val activityDao = AppDatabase.getInstance(appContext).activityDao()
 
     private val _activities = activityDao.getAll()
         .stateIn(
@@ -31,19 +31,36 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
         )
     val activities: StateFlow<List<ActivityTask>> = _activities
 
+    private val prefs = appContext.preferenceDatastore.data.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = null
+    )
+
+    val reminderTime = appContext.preferenceDatastore.data
+        .map { prefs ->
+            LocalTime.ofSecondOfDay(
+                prefs[REMINDER_TIME_KEY]?.toLong() ?: 0
+            )
+        }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000),
+            initialValue = LocalTime.MIDNIGHT
+        )
+
+    fun setReminderTime(time: LocalTime) {
+        viewModelScope.launch {
+            appContext.preferenceDatastore.edit {
+                it[REMINDER_TIME_KEY] = time.toSecondOfDay()
+            }
+        }
+    }
+
     init {
         viewModelScope.launch {
-            activityDao.getAll().collectLatest {
-                if (it.isEmpty()) {
-                    activityDao.insert(
-                        ActivityTask(
-                            name = "My first activity",
-                            goal = 60,
-                            progress = 10,
-                            color = null,
-                        )
-                    )
-                }
+            reminderTime.debounce(500).collect {
+                queueReminder(it, appContext)
             }
         }
     }
@@ -51,15 +68,42 @@ class SharedViewModel(application: Application) : AndroidViewModel(application) 
     fun updateActivity(activity: ActivityTask): ActivityTask {
         var newActivity = activity
         if (newActivity.name.isBlank()) {
-            newActivity = activity.copy(name = newActivity.uid.toString())
+            if (newActivity.uid != 0) {
+                newActivity = newActivity.copy(name = newActivity.uid.toString())
+            } else {
+                newActivity = newActivity.copy(name = activities.value.size.toString())
+            }
         }
         viewModelScope.launch {
             activityDao.update(newActivity)
         }
+        if (newActivity.lastStart != null) {
+            ActivityProgressService.StartService(appContext)
+        }
         return newActivity
     }
 
+    fun createNewActivity(activity: ActivityTask) {
+        var newActivity = activity
+        if (newActivity.name.isBlank()) {
+            newActivity = newActivity.copy(name = (activities.value.size + 1).toString())
+        }
+        viewModelScope.launch {
+            activityDao.insert(newActivity)
+        }
+    }
+
+    fun deleteActivity(activity: ActivityTask) {
+        viewModelScope.launch {
+            activityDao.delete(activity)
+        }
+    }
+
     suspend fun loadActivity(uid: Int): ActivityTask {
-        return activityDao.get(uid)
+        val activity = activityDao.get(uid)
+        if (activity.isCompleted()) {
+            return updateActivity(activity.toCompleted())
+        }
+        return activity
     }
 }

@@ -14,7 +14,9 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 
-val pickableColors = listOf(null, Color.Red, Color.Yellow, Color.Blue, Color.Green, Color.Cyan, Color.Magenta)
+val numExtraColors = 19
+val pickableColors =
+    listOf(null) + (0..numExtraColors).toList().dropLast(1).map { Color.hsl(it * 360f / numExtraColors, 0.8f, 0.6f) }
 
 @Composable
 fun ColorPickerDialog(value: Color?, onDismissRequest: (Color?) -> Unit) {

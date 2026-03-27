@@ -1,3 +1,19 @@
 <resources>
     <string name="app_name">ActivityTracker</string>
+    <string name="app_uri">activitytracker://</string>
+
+    <string name="task_remind_notif_title">%1$s reminder</string>
+    <string name="task_remind_channel_name">Activity Reminder</string>
+    <string name="task_remind_channel_id">reminder_channel</string>
+
+    <string name="task_completed_notif_title">Completed %1$s!</string>
+    <string name="task_completed_channel_name">Activity Completed</string>
+    <string name="task_completed_channel_id">completed_channel</string>
+
+    <string name="task_progress_notif_title">Working on %1$s...</string>
+    <string name="task_progress_channel_name">Activity Progress</string>
+    <string name="task_progress_channel_id">progress_channel</string>
+
+    <string name="task_foreground_channel_name">(Disable this)</string>
+    <string name="task_foreground_channel_id">foreground_channel</string>
 </resources>
