@@ -1,21 +1,25 @@
 package com.flynnd273.activitytracker.workers
 
 import android.content.Context
-import androidx.work.Worker
+import android.util.Log
+import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.flynnd273.activitytracker.SharedViewModel
+import kotlinx.coroutines.flow.drop
+import kotlinx.coroutines.flow.firstOrNull
 
 class ResetProgressWorker(
     val context: Context,
     params: WorkerParameters
-) : Worker(context, params) {
+) : CoroutineWorker(context, params) {
 
-    override fun doWork(): Result {
+    override suspend fun doWork(): Result {
+        Log.d("RESET", "Resetting all activities")
         val viewModel = SharedViewModel(context)
-        for (activity in viewModel.activities.value) {
+        for (activity in (viewModel.activities.drop(1).firstOrNull() ?: emptyList())) {
             viewModel.updateActivity(activity.toReset())
         }
-        updateResetTask(context)
+        queueResetTask(context)
         return Result.success()
     }
 }

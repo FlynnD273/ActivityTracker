@@ -3,7 +3,13 @@ package com.flynnd273.activitytracker.notifications
 import android.app.*
 import android.content.Context
 import android.content.Intent
+import android.content.res.ColorStateList
+import android.content.res.Configuration
 import android.util.Log
+import android.widget.RemoteViews
+import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.dynamicDarkColorScheme
+import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.ui.graphics.toArgb
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat
@@ -15,6 +21,7 @@ import com.flynnd273.activitytracker.database.ActivityTask
 import com.flynnd273.activitytracker.database.AppDatabase
 import kotlinx.coroutines.*
 import java.time.LocalDateTime
+
 
 class ActivityProgressService : Service() {
     companion object {
@@ -33,14 +40,22 @@ class ActivityProgressService : Service() {
     private val scope = CoroutineScope(Dispatchers.Main + Job())
     private lateinit var activityDao: ActivityDao
 
+    private lateinit var colorScheme: ColorScheme
+
     override fun onCreate() {
         super.onCreate()
         isRunning = true
         notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         activityDao = AppDatabase.getInstance(applicationContext).activityDao()
 
+        val isDarkTheme =
+            (applicationContext.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
+        colorScheme =
+            if (isDarkTheme) dynamicDarkColorScheme(applicationContext) else dynamicLightColorScheme(applicationContext)
+
         val notification = NotificationCompat.Builder(this, getString(R.string.task_foreground_channel_id))
             .setSmallIcon(android.R.drawable.ic_dialog_info)
+            .setContentTitle(getString(R.string.task_foreground_channel_name))
             .build()
         startForeground(1000, notification)
     }
@@ -56,7 +71,6 @@ class ActivityProgressService : Service() {
     }
 
     private suspend fun updateProgressNotifications(tasks: List<ActivityTask>) {
-        Log.d("TIMER", "Updating progress...")
         val now = LocalDateTime.now()
         for (activity in tasks) {
             if (activity.lastStart == null) {
@@ -91,20 +105,42 @@ class ActivityProgressService : Service() {
             addNextIntentWithParentStack(deepLinkIntent)
             getPendingIntent(0, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         }
+
+        val remoteViews = RemoteViews(packageName, R.layout.progress_notif)
+        remoteViews.setTextViewText(R.id.title, getString(R.string.task_progress_notif_title).format(activity.name))
+        remoteViews.setTextColor(R.id.title, colorScheme.onBackground.toArgb())
+        remoteViews.setProgressBar(
+            R.id.progress,
+            activity.goal,
+            activity.realProgress(now),
+            false
+        )
+        remoteViews.setColorStateList(
+            R.id.progress, "setProgressTintList",
+            ColorStateList.valueOf((activity.color ?: colorScheme.primary).toArgb())
+        )
+
+
         return NotificationCompat.Builder(this, getString(R.string.task_progress_channel_id))
             .setContentTitle(getString(R.string.task_progress_notif_title).format(activity.name))
             .setSmallIcon(android.R.drawable.ic_dialog_info)
-            .let {
-                if (activity.color != null) {
-                    it.setColor(activity.color.toArgb())
-                } else {
-                    it
-                }
-            }
-            .setProgress(activity.goal, activity.realProgress(now), false)
-            .setOngoing(true).apply {
-                setContentIntent(deepLinkPendingIntent)
-            }
+            .setOnlyAlertOnce(true)
+//            .setStyle(
+//                NotificationCompat.ProgressStyle()
+//                    .setProgress(activity.realProgress(now))
+//                    .addProgressSegment(NotificationCompat.ProgressStyle.Segment(activity.goal).let {
+//                        if (activity.color != null) {
+//                            it.setColor(activity.color.toArgb())
+//                        } else {
+//                            it.setColor(defaultColor.toArgb())
+//                        }
+//                    })
+//            )
+//            .setProgress(activity.goal, activity.realProgress(now), false)
+            .setCustomContentView(remoteViews)
+            .setCustomBigContentView(remoteViews)
+            .setOngoing(true)
+            .setContentIntent(deepLinkPendingIntent)
             .build()
     }
 
@@ -122,16 +158,8 @@ class ActivityProgressService : Service() {
         return NotificationCompat.Builder(this, getString(R.string.task_completed_channel_id))
             .setContentTitle(getString(R.string.task_completed_notif_title).format(activity.name))
             .setSmallIcon(android.R.drawable.ic_dialog_info)
-            .let {
-                if (activity.color != null) {
-                    it.setColor(activity.color.toArgb())
-                } else {
-                    it
-                }
-            }
-            .setAutoCancel(true).apply {
-                setContentIntent(deepLinkPendingIntent)
-            }
+            .setAutoCancel(true)
+            .setContentIntent(deepLinkPendingIntent)
             .build()
     }
 
@@ -139,7 +167,6 @@ class ActivityProgressService : Service() {
 
     override fun onDestroy() {
         super.onDestroy()
-        stopForeground(true)
         notificationManager.cancel(1000)
         scope.cancel()
         isRunning = false

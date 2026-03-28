@@ -9,7 +9,7 @@ import androidx.lifecycle.viewModelScope
 import com.flynnd273.activitytracker.database.ActivityTask
 import com.flynnd273.activitytracker.database.AppDatabase
 import com.flynnd273.activitytracker.notifications.ActivityProgressService
-import com.flynnd273.activitytracker.workers.queueReminder
+import com.flynnd273.activitytracker.workers.queueReminderTask
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
@@ -60,7 +60,7 @@ class SharedViewModel(val appContext: Context) : ViewModel() {
     init {
         viewModelScope.launch {
             reminderTime.debounce(500).collect {
-                queueReminder(it, appContext)
+                queueReminderTask(it, appContext)
             }
         }
     }
