@@ -60,10 +60,17 @@ class ActivityProgressService : Service() {
         startForeground(1000, notification)
     }
 
+    private var allTasks: List<ActivityTask> = emptyList()
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        scope.launch(Dispatchers.IO) {
+            activityDao.getAll().collect {
+                allTasks = it
+            }
+        }
         scope.launch {
             while (isActive) {
-                updateProgressNotifications(activityDao.getAllOnce())
+                updateProgressNotifications(allTasks)
                 delay(1000)
             }
         }
@@ -78,6 +85,7 @@ class ActivityProgressService : Service() {
                 continue
             }
             val notification = buildNotification(activity, now)
+            Log.d("PROGRESS", "Can be promoted? ${notification.hasPromotableCharacteristics()}")
             notificationManager.notify(activity.uid, notification)
 
             if (activity.isCompleted(now)) {
@@ -103,7 +111,7 @@ class ActivityProgressService : Service() {
         )
         val deepLinkPendingIntent: PendingIntent? = TaskStackBuilder.create(this).run {
             addNextIntentWithParentStack(deepLinkIntent)
-            getPendingIntent(0, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+            getPendingIntent(activity.uid, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         }
 
         val remoteViews = RemoteViews(packageName, R.layout.progress_notif)
@@ -132,11 +140,12 @@ class ActivityProgressService : Service() {
 //                        if (activity.color != null) {
 //                            it.setColor(activity.color.toArgb())
 //                        } else {
-//                            it.setColor(defaultColor.toArgb())
+//                            it.setColor(colorScheme.primary.toArgb())
 //                        }
 //                    })
 //            )
 //            .setProgress(activity.goal, activity.realProgress(now), false)
+//            .setRequestPromotedOngoing(true)
             .setCustomContentView(remoteViews)
             .setCustomBigContentView(remoteViews)
             .setOngoing(true)
@@ -153,7 +162,7 @@ class ActivityProgressService : Service() {
         )
         val deepLinkPendingIntent: PendingIntent? = TaskStackBuilder.create(this).run {
             addNextIntentWithParentStack(deepLinkIntent)
-            getPendingIntent(0, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+            getPendingIntent(activity.uid, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         }
         return NotificationCompat.Builder(this, getString(R.string.task_completed_channel_id))
             .setContentTitle(getString(R.string.task_completed_notif_title).format(activity.name))
@@ -166,9 +175,8 @@ class ActivityProgressService : Service() {
     override fun onBind(intent: Intent?) = null
 
     override fun onDestroy() {
-        super.onDestroy()
-        notificationManager.cancel(1000)
+        stopForeground(STOP_FOREGROUND_REMOVE)
         scope.cancel()
-        isRunning = false
+        super.onDestroy()
     }
 }

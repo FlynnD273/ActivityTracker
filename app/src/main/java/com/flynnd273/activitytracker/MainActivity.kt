@@ -1,12 +1,8 @@
 package com.flynnd273.activitytracker
 
-import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
-import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Bundle
-import android.os.PowerManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -14,7 +10,6 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.core.content.ContextCompat
 import com.flynnd273.activitytracker.ui.screens.PermissionsScreen
 import com.flynnd273.activitytracker.ui.theme.ActivityTrackerTheme
 import com.flynnd273.activitytracker.workers.queueReminderTask
@@ -31,44 +26,21 @@ class MainActivity : ComponentActivity() {
         createNotificationChannels()
 
         setContent {
-            var permsGranted by remember {
-                mutableStateOf(
-                    checkPermissions()
-                )
-            }
+            var permsGranted by remember { mutableStateOf(true) }
+            var initPerms by remember { mutableStateOf(true) }
 
             ActivityTrackerTheme {
                 if (permsGranted) {
                     App(viewModel)
-                } else {
-                    PermissionsScreen({ permsGranted = checkPermissions() }, { checkBatteryPerms() })
+                }
+                if (!permsGranted || initPerms) {
+                    PermissionsScreen({ permsGranted = false }, {
+                        permsGranted = true
+                        initPerms = false
+                    })
                 }
             }
         }
-    }
-
-    private fun checkPermissions(): Boolean {
-        val batteryGranted = checkBatteryPerms()
-        val notifsGranted = checkNotifPerms()
-        return batteryGranted && notifsGranted
-    }
-
-    private fun checkNotifPerms(): Boolean {
-        val notifsGranted = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            ContextCompat.checkSelfPermission(
-                applicationContext,
-                Manifest.permission.POST_NOTIFICATIONS
-            ) == PackageManager.PERMISSION_GRANTED
-        } else {
-            return true
-        }
-        return notifsGranted
-    }
-
-    private fun checkBatteryPerms(): Boolean {
-        val pm = applicationContext.getSystemService(PowerManager::class.java) as PowerManager
-        val batteryGranted = pm.isIgnoringBatteryOptimizations(applicationContext.packageName)
-        return batteryGranted
     }
 
     private fun createNotificationChannels() {

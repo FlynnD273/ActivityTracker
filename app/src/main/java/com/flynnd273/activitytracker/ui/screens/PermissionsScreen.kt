@@ -1,11 +1,11 @@
 package com.flynnd273.activitytracker.ui.screens
 
 import android.Manifest
-import android.content.Intent
+import android.app.NotificationManager
+import android.content.Context.NOTIFICATION_SERVICE
 import android.content.pm.PackageManager
-import android.net.Uri
 import android.os.Build
-import android.provider.Settings
+import android.os.PowerManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
@@ -22,15 +22,43 @@ import androidx.core.content.ContextCompat
 
 @Composable
 fun PermissionsScreen(
+    onPermissionsDenied: () -> Unit,
     onPermissionsGranted: () -> Unit,
-    checkBatteryPerms: () -> Boolean,
 ) {
     val context = LocalContext.current
 
+    fun checkNotifPerms(): Boolean = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        ContextCompat.checkSelfPermission(
+            context,
+            Manifest.permission.POST_NOTIFICATIONS
+        ) == PackageManager.PERMISSION_GRANTED
+    } else {
+        true
+    }
+
+    val notificationManager: NotificationManager = remember {
+        context.getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+    }
+
+    fun checkPromotedNotifPerms(): Boolean = true
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA) {
+//        ContextCompat.checkSelfPermission(
+//            context,
+//            "android.permission.POST_PROMOTED_NOTIFICATIONS"
+//        ) == PackageManager.PERMISSION_GRANTED
+//    } else {
+//        true
+//    }
+
+    fun checkBatteryPerms(): Boolean {
+        val pm = context.getSystemService(PowerManager::class.java) as PowerManager
+        val batteryGranted = pm.isIgnoringBatteryOptimizations(context.packageName)
+        return batteryGranted
+    }
+
     var notificationsGranted by remember {
         mutableStateOf(
-            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
-                    PackageManager.PERMISSION_GRANTED
+            checkNotifPerms()
         )
     }
 
@@ -41,16 +69,37 @@ fun PermissionsScreen(
         }
     )
 
-    var batteryGranted by remember {
+//    var batteryGranted by remember {
+//        mutableStateOf(
+//            checkBatteryPerms()
+//        )
+//    }
+
+    var promotedNotificationsGranted by remember {
         mutableStateOf(
-            checkBatteryPerms()
+            checkPromotedNotifPerms()
         )
     }
 
-    val batteryIntentLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult(),
-        onResult = { batteryGranted = checkBatteryPerms() }
+    val promotedNotificationLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission(),
+        onResult = { granted ->
+            promotedNotificationsGranted = granted
+        }
     )
+
+    val allPerms by remember { derivedStateOf { notificationsGranted && promotedNotificationsGranted } }
+
+    if (allPerms) {
+        onPermissionsGranted()
+    } else {
+        onPermissionsDenied()
+    }
+
+//    val batteryIntentLauncher = rememberLauncherForActivityResult(
+//        contract = ActivityResultContracts.StartActivityForResult(),
+//        onResult = { batteryGranted = checkBatteryPerms() }
+//    )
 
     Scaffold { innerPadding ->
         Column(
@@ -64,32 +113,36 @@ fun PermissionsScreen(
             Button(
                 enabled = !notificationsGranted,
                 onClick = {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                        notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-                    } else {
-                        notificationsGranted = true
-                    }
+                    notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                 }) {
                 Text("Enable Notifications")
             }
 
             Button(
-                enabled = !batteryGranted,
+                enabled = !promotedNotificationsGranted,
                 onClick = {
-                    val intent = Intent().apply {
-                        action = Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS
-                        data = Uri.parse("package:${context.packageName}")
-                    }
-                    batteryIntentLauncher.launch(intent)
+                    promotedNotificationLauncher.launch("android.permission.POST_PROMOTED_NOTIFICATIONS")
                 }) {
-                Text("Allow Unrestricted Battery")
+                Text("Enable Live Notifications")
             }
+
+//            Button(
+//                enabled = !batteryGranted,
+//                onClick = {
+//                    val intent = Intent().apply {
+//                        action = Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS
+//                        data = Uri.parse("package:${context.packageName}")
+//                    }
+//                    batteryIntentLauncher.launch(intent)
+//                }) {
+//                Text("Allow Unrestricted Battery")
+//            }
 
             Spacer(modifier = Modifier.height(32.dp))
 
             Button(
                 onClick = { onPermissionsGranted() },
-                enabled = notificationsGranted && batteryGranted
+                enabled = allPerms
             ) {
                 Text("Continue")
             }
