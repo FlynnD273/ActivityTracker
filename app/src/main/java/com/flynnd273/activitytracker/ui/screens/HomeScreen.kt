@@ -24,6 +24,7 @@ import kotlinx.coroutines.delay
 import java.time.Duration
 import java.time.LocalDateTime
 
+@OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun HomeScreen(
     activities: List<ActivityTask>,
@@ -37,45 +38,48 @@ fun HomeScreen(
     LaunchedEffect(Unit) {
         while (true) {
             now = LocalDateTime.now()
-            delay(500)
+            delay(100)
         }
     }
-    Scaffold(floatingActionButton = {
-        with(sharedTransitionScope) {
-            FloatingActionButton(
-                modifier = Modifier
-                    .sharedBounds(
-                        rememberSharedContentState(key = "fab"),
-                        animatedVisibilityScope = animatedVisibilityScope,
-                        resizeMode = SharedTransitionScope.ResizeMode.scaleToBounds(ContentScale.None),
-                    ),
-                onClick = { addingNewActivity = true }) {
-                Icon(Icons.Default.Add, "Create new")
-            }
-        }
-    }) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
+    Scaffold(
+        topBar = {
             Text(
                 "My Activities",
-                style = MaterialTheme.typography.headlineMedium,
+                style = MaterialTheme.typography.headlineLargeEmphasized,
                 textAlign = TextAlign.Center,
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 12.dp)
             )
+        },
+        floatingActionButton = {
+            with(sharedTransitionScope) {
+                FloatingActionButton(
+                    modifier = Modifier
+                        .sharedBounds(
+                            rememberSharedContentState(key = "fab"),
+                            animatedVisibilityScope = animatedVisibilityScope,
+                            resizeMode = SharedTransitionScope.ResizeMode.scaleToBounds(ContentScale.None),
+                        ),
+                    onClick = { addingNewActivity = true }) {
+                    Icon(Icons.Default.Add, "Create new")
+                }
+            }
+        }) { innerPadding ->
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
+        ) {
             if (activities.isNotEmpty()) {
                 LazyColumn {
-                    items(activities) {
-                        val progressValue by remember(it) {
+                    items(activities) { activity ->
+                        val progressValue by remember(activity) {
                             derivedStateOf {
-                                val baseProgress = it.progress
-                                if (it.lastStart != null) {
-                                    val elapsed = Duration.between(it.lastStart, now)
-                                    baseProgress + elapsed.seconds.toInt()
+                                val baseProgress = activity.progress
+                                if (activity.lastStart != null) {
+                                    val elapsed = Duration.between(activity.lastStart, now)
+                                    baseProgress + elapsed.toMillis() / 1000f
                                 } else {
                                     baseProgress
                                 }
@@ -85,17 +89,18 @@ fun HomeScreen(
                         Column(
                             modifier = Modifier
                                 .padding(8.dp)
-                                .clickable(onClick = { navigateToActivity(it.uid) })
+                                .clickable(onClick = { navigateToActivity(activity.uid) })
                         ) {
-                            Text(it.name, fontSize = 4.em)
-                            LinearProgressIndicator(
-                                progress = { progressValue.toFloat() / it.goal.coerceAtLeast(1) },
+                            Text(activity.name, fontSize = 4.em)
+                            LinearWavyProgressIndicator(
+                                progress = { progressValue.toFloat() / activity.goal.coerceAtLeast(1) },
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(vertical = 8.dp),
-                                color = it.color ?: ProgressIndicatorDefaults.linearColor,
+                                color = activity.color ?: ProgressIndicatorDefaults.linearColor,
                                 trackColor = ProgressIndicatorDefaults.linearTrackColor,
-                                strokeCap = ProgressIndicatorDefaults.LinearStrokeCap,
+                                amplitude = { if (activity.lastStart == null) 0f else 1f },
+                                waveSpeed = 5.dp,
                             )
                         }
                     }

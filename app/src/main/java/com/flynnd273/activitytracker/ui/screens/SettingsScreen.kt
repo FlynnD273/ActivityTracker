@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.StateFlow
 import java.time.Duration
 import java.time.LocalTime
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalMaterial3ExpressiveApi::class)
 @Composable
 fun SettingsScreen(
     reminderTimeState: StateFlow<LocalTime>,
@@ -34,79 +34,82 @@ fun SettingsScreen(
         }
     }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp)
-    ) {
+    Scaffold(topBar = {
         Text(
             "Settings",
-            style = MaterialTheme.typography.headlineMedium,
+            style = MaterialTheme.typography.headlineLargeEmphasized,
             textAlign = TextAlign.Center,
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(vertical = 12.dp)
         )
-        HorizontalDivider()
-        Row(
+    }) { innerPadding ->
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceAround
+                .padding(innerPadding)
+                .fillMaxSize()
         ) {
-            Text("Reminder time:", style = MaterialTheme.typography.bodyLarge)
-            Button(onClick = { showReminderTimeDialog = true }) {
-                Text(
-                    if (timePickerState.is24hour) {
-                        reminderTime.toString()
-                    } else {
-                        if (reminderTime.hour < 12) {
-                            if (reminderTime.hour == 0) {
-                                "${reminderTime + Duration.ofHours(12)} AM"
-                            } else {
-                                "$reminderTime AM"
-                            }
+            HorizontalDivider()
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceAround
+            ) {
+                Text("Reminder time:", style = MaterialTheme.typography.bodyLarge)
+                Button(onClick = { showReminderTimeDialog = true }) {
+                    Text(
+                        if (timePickerState.is24hour) {
+                            reminderTime.toString()
                         } else {
-                            if (reminderTime.hour == 12) {
-                                "$reminderTime PM"
+                            if (reminderTime.hour < 12) {
+                                if (reminderTime.hour == 0) {
+                                    "${reminderTime + Duration.ofHours(12)} AM"
+                                } else {
+                                    "$reminderTime AM"
+                                }
                             } else {
-                                "${reminderTime - Duration.ofHours(12)} PM"
+                                if (reminderTime.hour == 12) {
+                                    "$reminderTime PM"
+                                } else {
+                                    "${reminderTime - Duration.ofHours(12)} PM"
+                                }
                             }
-                        }
-                    },
+                        },
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+            }
+            Button(onClick = resetAll, enabled = hasProgress) {
+                Text(
+                    "Reset all progress",
                     fontWeight = FontWeight.SemiBold
                 )
             }
         }
-        Button(onClick = resetAll, enabled = hasProgress) {
-            Text(
-                "Reset all progress",
-                fontWeight = FontWeight.SemiBold
-            )
-        }
-    }
-    if (showReminderTimeDialog) {
-        TimePickerDialog(
-            onDismissRequest = {
-                showReminderTimeDialog = false
-                timePickerState.hourInput = reminderTime.hour
-                timePickerState.minuteInput = reminderTime.minute
-            },
-            confirmButton = {
-                TextButton({
-                    showReminderTimeDialog = false
-                    setReminderTime(LocalTime.of(timePickerState.hour, timePickerState.minute))
-                }) { Text("Confirm") }
-            },
-            dismissButton = {
-                TextButton({
+        if (showReminderTimeDialog) {
+            TimePickerDialog(
+                onDismissRequest = {
                     showReminderTimeDialog = false
                     timePickerState.hourInput = reminderTime.hour
                     timePickerState.minuteInput = reminderTime.minute
-                }) { Text("Cancel") }
-            },
-            title = { Text("Reminder Time") }
-        ) { TimePicker(timePickerState) }
+                },
+                confirmButton = {
+                    TextButton({
+                        showReminderTimeDialog = false
+                        setReminderTime(LocalTime.of(timePickerState.hour, timePickerState.minute))
+                    }) { Text("Confirm") }
+                },
+                dismissButton = {
+                    TextButton({
+                        showReminderTimeDialog = false
+                        timePickerState.hourInput = reminderTime.hour
+                        timePickerState.minuteInput = reminderTime.minute
+                    }) { Text("Cancel") }
+                },
+                title = { Text("Reminder Time") }
+            ) { TimePicker(timePickerState) }
+        }
     }
 }

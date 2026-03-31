@@ -56,7 +56,7 @@ fun ActivityScreen(
                     mutableActivity = activity.toCompleted()
                 }
             }
-            delay(1000)
+            delay(100)
         }
     }
 
@@ -149,21 +149,25 @@ fun ActivityScreen(
                                 val baseProgress = activity.progress
                                 if (activity.lastStart != null) {
                                     val elapsed = Duration.between(activity.lastStart, now)
-                                    baseProgress + elapsed.seconds.toInt()
+                                    baseProgress + elapsed.toMillis() / 1000f
                                 } else {
                                     baseProgress
                                 }
                             }
                         }
-                        CircularProgressIndicator(
+                        CircularWavyProgressIndicator(
                             progress = { progressValue.toFloat() / activity.goal.coerceAtLeast(1) },
                             modifier = Modifier
                                 .fillMaxSize(),
                             color = activity.color ?: ProgressIndicatorDefaults.linearColor,
+                            amplitude = { if (activity.lastStart == null) 0f else 1f },
+                            wavelength = 50.dp,
+                            waveSpeed = 5.dp,
                         )
+
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
-                                progressValue.toTimestamp(),
+                                progressValue.toInt().toTimestamp(),
                                 fontSize = progressFontSize,
                                 fontWeight = FontWeight.Black,
                                 textAlign = TextAlign.Center,
