@@ -1,11 +1,12 @@
 package com.flynnd273.activitytracker.ui.screens
 
 import android.Manifest
-import android.app.NotificationManager
-import android.content.Context.NOTIFICATION_SERVICE
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import android.os.Build
 import android.os.PowerManager
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.*
@@ -34,10 +35,6 @@ fun PermissionsScreen(
         ) == PackageManager.PERMISSION_GRANTED
     } else {
         true
-    }
-
-    val notificationManager: NotificationManager = remember {
-        context.getSystemService(NOTIFICATION_SERVICE) as NotificationManager
     }
 
     fun checkPromotedNotifPerms(): Boolean = true
@@ -69,11 +66,11 @@ fun PermissionsScreen(
         }
     )
 
-//    var batteryGranted by remember {
-//        mutableStateOf(
-//            checkBatteryPerms()
-//        )
-//    }
+    var batteryGranted by remember {
+        mutableStateOf(
+            checkBatteryPerms()
+        )
+    }
 
     var promotedNotificationsGranted by remember {
         mutableStateOf(
@@ -96,10 +93,10 @@ fun PermissionsScreen(
         onPermissionsDenied()
     }
 
-//    val batteryIntentLauncher = rememberLauncherForActivityResult(
-//        contract = ActivityResultContracts.StartActivityForResult(),
-//        onResult = { batteryGranted = checkBatteryPerms() }
-//    )
+    val batteryIntentLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult(),
+        onResult = { batteryGranted = checkBatteryPerms() }
+    )
 
     Scaffold { innerPadding ->
         Column(
@@ -126,17 +123,17 @@ fun PermissionsScreen(
                 Text("Enable Live Notifications")
             }
 
-//            Button(
-//                enabled = !batteryGranted,
-//                onClick = {
-//                    val intent = Intent().apply {
-//                        action = Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS
-//                        data = Uri.parse("package:${context.packageName}")
-//                    }
-//                    batteryIntentLauncher.launch(intent)
-//                }) {
-//                Text("Allow Unrestricted Battery")
-//            }
+            Button(
+                enabled = !batteryGranted,
+                onClick = {
+                    val intent = Intent().apply {
+                        action = Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS
+                        data = Uri.parse("package:${context.packageName}")
+                    }
+                    batteryIntentLauncher.launch(intent)
+                }) {
+                Text("Allow Unrestricted Battery")
+            }
 
             Spacer(modifier = Modifier.height(32.dp))
 

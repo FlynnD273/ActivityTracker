@@ -1,7 +1,6 @@
 package com.flynnd273.activitytracker.workers
 
 import android.content.Context
-import android.util.Log
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
@@ -10,7 +9,6 @@ import java.time.LocalTime
 import java.util.concurrent.TimeUnit
 
 fun queueResetTask(context: Context) {
-    Log.d("RESET", "Queueing reset")
     val resetJob = OneTimeWorkRequestBuilder<ResetProgressWorker>()
         .setInitialDelay(secondsUntil(LocalTime.MIDNIGHT), TimeUnit.SECONDS)
         .build()
@@ -22,10 +20,9 @@ fun queueResetTask(context: Context) {
 }
 
 fun queueReminderTask(time: LocalTime, context: Context) {
-    val workRequest =
-        OneTimeWorkRequestBuilder<ReminderWorker>()
-            .setInitialDelay(secondsUntil(time), TimeUnit.SECONDS)
-            .build()
+    val workRequest = OneTimeWorkRequestBuilder<ReminderWorker>()
+        .setInitialDelay(secondsUntil(time), TimeUnit.SECONDS)
+        .build()
     WorkManager.getInstance(context).enqueueUniqueWork(
         "remind_task",
         ExistingWorkPolicy.REPLACE,

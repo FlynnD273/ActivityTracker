@@ -5,7 +5,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.res.ColorStateList
 import android.content.res.Configuration
-import android.util.Log
 import android.widget.RemoteViews
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
@@ -29,7 +28,6 @@ class ActivityProgressService : Service() {
 
         fun StartService(context: Context) {
             if (!isRunning) {
-                Log.d("TIMER", "Starting service")
                 val intent = Intent(context, ActivityProgressService::class.java)
                 ContextCompat.startForegroundService(context, intent)
             }
@@ -61,6 +59,7 @@ class ActivityProgressService : Service() {
     }
 
     private var allTasks: List<ActivityTask> = emptyList()
+    private var progressedTasks: MutableSet<Int> = mutableSetOf()
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         scope.launch(Dispatchers.IO) {
@@ -81,14 +80,17 @@ class ActivityProgressService : Service() {
         val now = LocalDateTime.now()
         for (activity in tasks) {
             if (activity.lastStart == null) {
-                notificationManager.cancel(activity.uid)
+                if (progressedTasks.contains(activity.uid)) {
+                    notificationManager.cancel(activity.uid)
+                }
                 continue
             }
             val notification = buildNotification(activity, now)
-            Log.d("PROGRESS", "Can be promoted? ${notification.hasPromotableCharacteristics()}")
             notificationManager.notify(activity.uid, notification)
+            progressedTasks.add(activity.uid)
 
             if (activity.isCompleted(now)) {
+                progressedTasks.remove(activity.uid)
                 activityDao.update(activity.toCompleted())
                 notificationManager.notify(
                     activity.uid,
@@ -175,6 +177,7 @@ class ActivityProgressService : Service() {
     override fun onBind(intent: Intent?) = null
 
     override fun onDestroy() {
+        isRunning = false
         stopForeground(STOP_FOREGROUND_REMOVE)
         scope.cancel()
         super.onDestroy()
