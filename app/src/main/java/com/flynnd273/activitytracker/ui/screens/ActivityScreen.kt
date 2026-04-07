@@ -143,15 +143,21 @@ fun ActivityScreen(
                             (maxHeight * 0.15f).toSp()
                         }
                         val goalFontSize = progressFontSize * 0.75f
+                        var uiUpdateOffsetHack by remember { mutableStateOf(0) }
+                        LaunchedEffect(activity) {
+                            delay(400)
+                            uiUpdateOffsetHack++
+                        }
 
                         val progressValue by remember(activity) {
                             derivedStateOf {
                                 val baseProgress = activity.progress
+                                val offsetHack = (uiUpdateOffsetHack % 3) / 100f
                                 if (activity.lastStart != null) {
                                     val elapsed = Duration.between(activity.lastStart, now)
-                                    baseProgress + elapsed.toMillis() / 1000f
+                                    baseProgress + elapsed.toMillis() / 1000f + offsetHack
                                 } else {
-                                    baseProgress
+                                    baseProgress + offsetHack
                                 }
                             }
                         }
